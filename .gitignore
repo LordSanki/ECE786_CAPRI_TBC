@@ -1,0 +1,8 @@
+config_fermi_islip.icnt
+gpgpusim.config
+gpgpusim/
+gpuwattch_gtx480.xml
+version
+source_me
+g++
+gcc
