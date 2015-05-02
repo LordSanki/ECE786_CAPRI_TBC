@@ -1,3 +1,4 @@
+sudo apt-get install build-essential
 if $(uname -m | grep '64') then
   wget http://developer.download.nvidia.com/compute/cuda/4_0/toolkit/cudatoolkit_4.0.17_linux_64_ubuntu10.10.run
   sudo chmod u+x downloads/cudatoolkit_4.0.17_linux_64_ubuntu10.10.run
