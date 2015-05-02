@@ -1,16 +1,15 @@
-mkdir downloads
-cd downloads
+mkdir -p downloads; cd downloads;
 
 if $(uname -m | grep '64'); then
-  #wget http://developer.download.nvidia.com/compute/cuda/4_0/toolkit/cudatoolkit_4.0.17_linux_64_ubuntu10.10.run
-  #sudo chmod u+x cudatoolkit_4.0.17_linux_64_ubuntu10.10.run
-  #echo "Installing cuda. Press Enter when prompted for path"
-  #sudo ./cudatoolkit_4.0.17_linux_64_ubuntu10.10.run
+  wget http://developer.download.nvidia.com/compute/cuda/4_0/toolkit/cudatoolkit_4.0.17_linux_64_ubuntu10.10.run
+  sudo chmod u+x cudatoolkit_4.0.17_linux_64_ubuntu10.10.run
+  echo "\n\n\nInstalling cuda. Press Enter when prompted for path\n\n"
+  sudo ./cudatoolkit_4.0.17_linux_64_ubuntu10.10.run
 else
-  #wget http://developer.download.nvidia.com/compute/cuda/4_0/toolkit/cudatoolkit_4.0.17_linux_32_ubuntu10.10.run
-  #sudo chmod u+x cudatoolkit_4.0.17_linux_32_ubuntu10.10.run
-  #echo "Installing cuda. Press Enter when prompted for path"
-  #sudo ./cudatoolkit_4.0.17_linux_32_ubuntu10.10.run
+  wget http://developer.download.nvidia.com/compute/cuda/4_0/toolkit/cudatoolkit_4.0.17_linux_32_ubuntu10.10.run
+  sudo chmod u+x cudatoolkit_4.0.17_linux_32_ubuntu10.10.run
+  echo "\n\n\nInstalling cuda. Press Enter when prompted for path\n\n"
+  sudo ./cudatoolkit_4.0.17_linux_32_ubuntu10.10.run
 fi
 sudo apt-get install gcc-4.4
 sudo apt-get install g++-4.4
@@ -18,8 +17,7 @@ cd ../
 
 git clone https://github.com/LordSanki/gpgpu-sim_distribution.git gpgpusim
 cd gpgpusim
-#export CUDA_INSTALL_PATH=/usr/local/cuda
-export CUDA_INSTALL_PATH=/home/sanki/CUDA_env/cuda
+export CUDA_INSTALL_PATH=/usr/local/cuda
 source setup_environment > /dev/null
 make > /dev/null
 cd ../
@@ -31,5 +29,5 @@ ln -sf /usr/bin/gcc-4.4 gcc
 ln -sf /usr/bin/g++-4.4 g++
 ln -sf $PWD/../gpgpusim/version .
 ln -sf $PWD/../gpgpusim/configs/GTX480/* .
-echo "Setup Done. You can now compile and run code."
-echo " Dont forget to source the source_me file."
+echo "\n\n\nSetup Done. You can now compile and run code."
+echo "Dont forget to source the source_me file.\n\n"
