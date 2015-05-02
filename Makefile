@@ -1,4 +1,4 @@
-NVCC=/home/sanki/CUDA_env/cuda/bin/nvcc
+NVCC=$(CUDA_INSTALL_PATH)/bin/nvcc
 
 SRC=vector_addition.cu
 
