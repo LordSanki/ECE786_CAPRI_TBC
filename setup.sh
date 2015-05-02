@@ -1,5 +1,6 @@
 sudo apt-get install build-essential
-if $(uname -m | grep '64') then
+if [$(uname -m | grep '64') != ""];
+then
   wget http://developer.download.nvidia.com/compute/cuda/4_0/toolkit/cudatoolkit_4.0.17_linux_64_ubuntu10.10.run
   sudo chmod u+x downloads/cudatoolkit_4.0.17_linux_64_ubuntu10.10.run
   echo "\n\n\nInstalling cuda. Press Enter when prompted for path\n\n"
@@ -10,6 +11,7 @@ else
   echo "\n\n\nInstalling cuda. Press Enter when prompted for path\n\n"
   sudo ./cudatoolkit_4.0.17_linux_32_ubuntu10.10.run
 fi
+
 sudo apt-get install xutils-dev
 sudo apt-get install gcc-4.4
 sudo apt-get install g++-4.4
