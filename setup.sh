@@ -1,23 +1,31 @@
-if [$(uname -m | grep '64') != ""];
+if [ -n $(uname -m | grep '64') ];
 then
-  if [ ! -a "cudatoolkit_4.0.17_linux_64_ubuntu10.10.run" ];
+  dfile=$PWD/cudatoolkit_4.0.17_linux_64_ubuntu10.10.run
+  if [ -e "$dfile" ];
   then
+    echo "$dfile exists skipping download. Remove it to redownload"
+  else
     wget http://developer.download.nvidia.com/compute/cuda/4_0/toolkit/cudatoolkit_4.0.17_linux_64_ubuntu10.10.run
-    chmod u+x cudatoolkit_4.0.17_linux_64_ubuntu10.10.run
   fi
-  if [ ! -d "cuda" ];
+  if [ -d "cuda" ];
   then
-    eval "mkdir cuda; ./cudatoolkit_4.0.17_linux_64_ubuntu10.10.run -- -prefix=$PWD/cuda"
+    echo "direcoty $PWD/cuda exists skipping installation. Remove it to reinstall"
+  else
+    eval "mkdir cuda; chmod u+x cudatoolkit_4.0.17_linux_64_ubuntu10.10.run; ./cudatoolkit_4.0.17_linux_64_ubuntu10.10.run -- -prefix=$PWD/cuda"
   fi
 else
-  if [ ! -a "cudatoolkit_4.0.17_linux_32_ubuntu10.10.run" ];
+  dfile=$PWD/cudatoolkit_4.0.17_linux_32_ubuntu10.10.run
+  if [ -e "$dfile" ];
   then
+    echo "$dfile exists skipping download. Remove it to redownload"
+  else
     wget http://developer.download.nvidia.com/compute/cuda/4_0/toolkit/cudatoolkit_4.0.17_linux_32_ubuntu10.10.run 
-    chmod u+x cudatoolkit_4.0.17_linux_32_ubuntu10.10.run
   fi
-  if [ ! -d "cuda" ];
+  if [ -d "cuda" ];
   then
-    eval "mkdir cuda; ./cudatoolkit_4.0.17_linux_32_ubuntu10.10.run -- -prefix=$PWD/cuda"
+    echo "direcoty $PWD/cuda exists skipping installation. Remove it to reinstall"
+  else
+    eval "mkdir cuda; chmod u+x cudatoolkit_4.0.17_linux_32_ubuntu10.10.run; ./cudatoolkit_4.0.17_linux_32_ubuntu10.10.run -- -prefix=$PWD/cuda"
   fi
 fi
 
@@ -32,7 +40,7 @@ sudo apt-get install libz-dev
 ln -sf /usr/bin/gcc-4.4 gcc
 ln -sf /usr/bin/g++-4.4 g++
 
-if [ ! -d "gpgpusim" ];
+if [ ! -d "$gpgpusim" ];
 then
   git clone https://github.com/LordSanki/gpgpu-sim_distribution.git gpgpusim
   cp gpgpusim/setup_environment gpgpusim/setup_environment.back
