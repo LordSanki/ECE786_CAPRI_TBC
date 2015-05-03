@@ -1,14 +1,55 @@
-#include <capri.h>
+#include "capri.h"
 #include <limits>
 #include <iostream>
 
 using namespace std;
 using namespace CAPRI;
 
-void Capri::process(Trace &trace)
+Capri *Capri::m_obj;
+
+Capri* Capri::getCapriObj()
 {
-  for(Trace::iterator itb = trace.begin(); itb != trace.end(); itb++){
-    ThreadBlock &tblock = *itb;
+  if(m_obj == NULL)
+    m_obj = new Capri();
+  return m_obj;
+}
+void Capri::releaseCapriObj()
+{
+  if(m_obj)
+    delete m_obj;
+}
+
+Capri::Capri()
+{
+  m_mispredictions = 0;
+  m_simd_util = 0.0;
+}
+
+Capri::~Capri()
+{
+}
+
+void Capri::store(TBID tbid, int wid, int opcode, long pc, BitMask mask)
+{
+  Trace::iterator it = m_trace.find(tbid);
+  if(it == m_trace.end()){
+    it = m_trace.insert( pair<TBID,ThreadBlock>(tbid, ThreadBlock()) ).first;
+  }
+  ThreadBlock &tblock = it->second;
+  while((int)tblock.size() <= wid){
+    tblock.push_back(Warp());
+  }
+  Instruction ins;
+  ins.op = (OpCodes)opcode;
+  ins.pc = pc;
+  ins.mask = mask;
+  tblock[wid].push_back(ins);
+}
+
+void Capri::process()
+{
+  for(Trace::iterator itb = m_trace.begin(); itb != m_trace.end(); itb++){
+    ThreadBlock &tblock = itb->second;
     int wid = get_min_pc_wid(tblock);
     while(wid != -1){
 
@@ -36,7 +77,7 @@ void Capri::process(Trace &trace)
         m_stack.top().factor = check_adequacy(curr, tblock);
       }
       else{
-        for(int w = 0; w < tblock.size(); w++){
+        for(int w = 0; w < (int)tblock.size(); w++){
           if(tblock[w].empty()) continue;
           if(tblock[w].front().pc == curr.pc)
             tblock[w].pop_front();
@@ -52,7 +93,7 @@ double Capri::check_adequacy( Instruction &curr, ThreadBlock &tblock)
 {
   int wcount=0;
   int mask_count[32] = {0};
-  for(int w=0; w<tblock.size(); w++){
+  for(int w=0; w<(int)tblock.size(); w++){
     if(tblock[w].front().pc == curr.pc){
       tblock[w].pop_front();
       for(int b=0; b<32; b++){
