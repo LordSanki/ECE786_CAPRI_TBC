@@ -67,21 +67,18 @@ namespace CAPRI
 
   class CAPT
   {
-    typedef std::set<long> TableType;
+    typedef std::map<long, bool> TableType;
 
     public:
     bool operator() (long pc){
       TableType::iterator it = m_table.find(pc);
-      if(it != m_table.end())
-        return true;
-      else
-        return false;
+      if(it != m_table.end()){
+        return it->second;
+      }
+      return true;
     }
     void operator()(long pc, bool val){
-      if(val)
-        m_table.insert(pc);
-      else
-        m_table.erase(pc);
+      m_table[pc] = val;
     }
 
     private:
@@ -93,27 +90,45 @@ namespace CAPRI
     private:
       Capri();
       ~Capri();
-      struct SIMDUtil{
+      struct SimdUtil{
         double factor;
-        int count;
-        BitMask mask;
+        long count;
+        SimdUtil(){factor = 0; count = 0;}
       };
-      typedef std::stack <SIMDUtil> SIMDStack;
-
-      SIMDStack m_stack;
-      double m_simd_util;
-      long m_mispredictions;
+      struct SimdStackElem{
+        SimdUtil pdom;
+        SimdUtil capri;
+        SimdUtil tbc;
+        BitMask mask;
+        SimdStackElem(){}
+        SimdStackElem(BitMask m){mask = m;}
+      };
+      typedef std::stack <SimdStackElem> SimdStack;
+      SimdStack m_stack;
+      double m_pdom_util;
+      double m_tbc_util;
+      double m_capri_util;
+      
       CAPT m_capt;
       Trace m_trace;
+      
+      long m_total_inst_count;
+      long m_non_divergent_inst_count;
+      long m_mispredictions;
+      long m_adq_branches;
+      long m_inadq_branches;
+      
       static Capri *m_obj;
+
+      void print_simd_util(double simd_util, const char*);
+      int get_min_pc_wid(ThreadBlock &tblock);
+      void check_adequacy(Instruction &curr, ThreadBlock &tblock);
 
     public:
       static Capri* getCapriObj();
       static void releaseCapriObj();
       void store(TBID tbid, int wid, int opcode, long pc, BitMask mask);
       void process();
-      double check_adequacy(Instruction &curr, ThreadBlock &tblock);
-      int get_min_pc_wid(ThreadBlock &tblock);
       void print_result();
   };
 

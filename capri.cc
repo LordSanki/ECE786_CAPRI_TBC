@@ -22,7 +22,13 @@ void Capri::releaseCapriObj()
 Capri::Capri()
 {
   m_mispredictions = 0;
-  m_simd_util = 0.0;
+  m_non_divergent_inst_count = 0;
+  m_adq_branches = 0;
+  m_inadq_branches = 0;
+  m_total_inst_count = 0;
+  m_tbc_util = 0;
+  m_capri_util = 0;
+  m_pdom_util = 0;
 }
 
 Capri::~Capri()
@@ -31,19 +37,21 @@ Capri::~Capri()
 
 void Capri::store(TBID tbid, int wid, int opcode, long pc, BitMask mask)
 {
-  Trace::iterator it = m_trace.find(tbid);
-  if(it == m_trace.end()){
-    it = m_trace.insert( pair<TBID,ThreadBlock>(tbid, ThreadBlock()) ).first;
+  if(tbid.x == 0 && tbid.y == 0 && tbid.z == 0){
+    Trace::iterator it = m_trace.find(tbid);
+    if(it == m_trace.end()){
+      it = m_trace.insert( pair<TBID,ThreadBlock>(tbid, ThreadBlock()) ).first;
+    }
+    ThreadBlock &tblock = it->second;
+    while((int)tblock.size() <= wid){
+      tblock.push_back(Warp());
+    }
+    Instruction ins;
+    ins.op = (OpCodes)opcode;
+    ins.pc = pc;
+    ins.mask = mask;
+    tblock[wid].push_back(ins);
   }
-  ThreadBlock &tblock = it->second;
-  while((int)tblock.size() <= wid){
-    tblock.push_back(Warp());
-  }
-  Instruction ins;
-  ins.op = (OpCodes)opcode;
-  ins.pc = pc;
-  ins.mask = mask;
-  tblock[wid].push_back(ins);
 }
 
 void Capri::process()
@@ -52,7 +60,7 @@ void Capri::process()
     ThreadBlock &tblock = itb->second;
     int wid = get_min_pc_wid(tblock);
     while(wid != -1){
-
+      m_total_inst_count++;
       Instruction curr = tblock[wid].front();
 
       // updating top of stack
@@ -61,20 +69,25 @@ void Capri::process()
         // and update global counter
         if(curr.mask == m_stack.top().mask)
         {
-          m_simd_util += (m_stack.top().factor * m_stack.top().count);
+          m_pdom_util += (m_stack.top().pdom.factor * m_stack.top().pdom.count);
+          m_tbc_util += (m_stack.top().tbc.factor * m_stack.top().tbc.count);
+          m_capri_util += (m_stack.top().capri.factor * m_stack.top().capri.count);
           m_stack.pop();
         }
         // not a reconv point. increment counter
         else{
-          m_stack.top().count++;
+          m_stack.top().capri.count++;
+          m_stack.top().tbc.count++;
+          m_stack.top().pdom.count++;
         }
+      }
+      else{
+        m_non_divergent_inst_count++;
       }
       // executing WCU and CAPT if BRANCH_OP encountered
       if(curr.op == BRANCH_OP){
-        m_stack.push(SIMDUtil());
-        m_stack.top().mask = curr.mask;
-        m_stack.top().count = 0;
-        m_stack.top().factor = check_adequacy(curr, tblock);
+        m_stack.push(SimdStackElem(curr.mask));
+        check_adequacy(curr, tblock);
       }
       else{
         for(int w = 0; w < (int)tblock.size(); w++){
@@ -89,7 +102,7 @@ void Capri::process()
   }
 }
 
-double Capri::check_adequacy( Instruction &curr, ThreadBlock &tblock)
+void Capri::check_adequacy( Instruction &curr, ThreadBlock &tblock)
 {
   int wcount=0;
   int mask_count[32] = {0};
@@ -103,18 +116,35 @@ double Capri::check_adequacy( Instruction &curr, ThreadBlock &tblock)
     }
   }
 
-  int max = mask_count[0];
+  int taken_count = mask_count[0];
+  int ntaken_count = mask_count[0];
   for(int m=0; m<32; m++){
-    if(mask_count[m] > max)
-      max = mask_count[m];
+    if(mask_count[m] > taken_count)
+      taken_count = mask_count[m];
+    if(mask_count[m] < ntaken_count)
+      ntaken_count = mask_count[m];
   }
 
-  if(max < 2*wcount ){
-    if( false == m_capt(curr.pc) )
+  ntaken_count = wcount - ntaken_count;
+
+  if(taken_count < wcount || ntaken_count < wcount){
+    m_adq_branches++;
+    if( false == m_capt(curr.pc) ){
       m_mispredictions++;
+      m_stack.top().capri.factor = 0.5;
+    }
+    else{
+      m_stack.top().capri.factor = (((double)wcount)/ ((double)taken_count+ntaken_count) );
+    }
     m_capt(curr.pc, true);
   }
-  return ( ((double)max) / ((double)wcount) );
+  else{
+    m_capt(curr.pc, false);
+    m_inadq_branches++;
+    m_stack.top().capri.factor = 0.5;
+  }
+  m_stack.top().pdom.factor = 0.5;
+  m_stack.top().tbc.factor = (((double)wcount)/ ((double)taken_count+ntaken_count) );
 }
 
 int Capri::get_min_pc_wid(ThreadBlock &tblock)
@@ -134,9 +164,26 @@ int Capri::get_min_pc_wid(ThreadBlock &tblock)
 
 void Capri::print_result()
 {
-  cout<<"\n\n====================================================\n\n";
-  cout<<"Avg TBC SIMD Utilization:\t"<<m_simd_util<<"\n";
-  cout<<"Avg CAPRI Mispredictions:\t"<<m_mispredictions<<"\n";
+  double capri_pred_rate, pdom_pred_rate, tbc_pred_rate;
+  long total_branches = m_adq_branches+m_inadq_branches;
+  capri_pred_rate = (total_branches-m_mispredictions);  capri_pred_rate /= total_branches;
+  pdom_pred_rate = m_inadq_branches; pdom_pred_rate /= total_branches;
+  tbc_pred_rate = m_adq_branches; tbc_pred_rate /= total_branches;
+  cout<<"\n\n====================================================\n\n\n";
+  print_simd_util(m_pdom_util, "PDOM");
+  print_simd_util(m_tbc_util, "TBC");
+  print_simd_util(m_capri_util, "CAPRI");
+  cout<<"Non divergent Inst:\t"<<m_non_divergent_inst_count<<"\n";
+  cout<<"Avg PDOM Prediction Rate:\t"<<pdom_pred_rate<<"\n";
+  cout<<"Avg TBC Prediction Rate:\t"<<tbc_pred_rate<<"\n";
+  cout<<"Avg CAPRI Prediction Rate:\t"<<capri_pred_rate<<"\n";
   cout<<"\n\n====================================================\n\n";
 }
+
+void Capri::print_simd_util(double simd_util, const char * name)
+{
+  simd_util += m_non_divergent_inst_count;
+  cout<<"Avg "<<name<<" SIMD Utilization:\t"<<simd_util/m_total_inst_count<<"\n";
+}
+
 
