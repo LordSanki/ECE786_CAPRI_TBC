@@ -14,12 +14,12 @@ __global__ void vecAdd(float *in1, float *in2, float *out, int len) {
   int i=0;
   //@@ Insert code to implement vector addition here
   //int i = blockIdx.x*blockDim.x + threadIdx.x;
-  if(threadIdx.x == 3 )
+//  if(threadIdx.x == 3 )
   //if(threadIdx.x == 3 || threadIdx.x == 35)
-    out[i] = in1[i]+in2[i];
+//    out[i] = in1[i]+in2[i];
   out[i] = in1[i]+in2[i];
   //if(threadIdx.x == 3 || threadIdx.x == 35)
-  if(threadIdx.x == 3 )
+  if(threadIdx.x < 16 || threadIdx.x > 47 )
     out[i] = in1[i]+in2[i];
   out[i] = in1[i]+in2[i];
 }
@@ -39,7 +39,7 @@ int main(int argc, char **argv) {
   if(argc > 1)
     inputLength = atoi(argv[1]);
   else
-   inputLength = 64;
+   inputLength = 128;
 
   hostInput1 = genInput(inputLength);
   hostInput2 = genInput(inputLength);
@@ -56,9 +56,9 @@ int main(int argc, char **argv) {
 
   //@@ Initialize the grid and block dimensions here
   //dim3 numBlocks(((inputLength-1)/ThreadsPerBlock)+1,1,1);
-  dim3 numBlocks(2,1,1);
+  dim3 numBlocks(1,1,1);
   //dim3 numThreads(ThreadsPerBlock,1,1);
-  dim3 numThreads(32,1,1);
+  dim3 numThreads(64,1,1);
 
   //@@ Launch the GPU Kernel here
   vecAdd<<<numBlocks, numThreads>>>(deviceInput1, deviceInput2, deviceOutput, inputLength);
