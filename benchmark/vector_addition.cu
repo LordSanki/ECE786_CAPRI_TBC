@@ -13,14 +13,16 @@ void verify(float *a, float *b, float *c, int l);
 __global__ void vecAdd(float *in1, float *in2, float *out, int len) {
   int i=0;
   //@@ Insert code to implement vector addition here
-  //int i = blockIdx.x*blockDim.x + threadIdx.x;
-//  if(threadIdx.x == 3 )
-  //if(threadIdx.x == 3 || threadIdx.x == 35)
-//    out[i] = in1[i]+in2[i];
-  out[i] = in1[i]+in2[i];
-  //if(threadIdx.x == 3 || threadIdx.x == 35)
-  if(threadIdx.x < 16 || threadIdx.x > 47 )
-    out[i] = in1[i]+in2[i];
+
+//  for(i=0; i<2; i++)
+    if(threadIdx.x < 16 || threadIdx.x > 47 )
+      out[i] = in1[i]+in2[i];
+  
+  for(i=0; i<1000; i++)
+    if(threadIdx.x < 16 || threadIdx.x > 47 )
+    //if(threadIdx.x%2 == 0 )
+      out[i] = in1[i]+in2[i];
+
   out[i] = in1[i]+in2[i];
 }
 
