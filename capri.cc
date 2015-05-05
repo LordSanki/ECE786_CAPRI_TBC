@@ -75,10 +75,6 @@ void Capri::process()
   for(Trace::iterator itb = m_trace.begin(); itb != m_trace.end(); itb++){
     ThreadBlock &tblock = itb->second;
     int wid = get_min_pc_wid(tblock);
-    int x = itb->first.x;
-    int y = itb->first.y;
-    int z = itb->first.z;
-    int size = tblock.size();
     m_stack = SimdStack();
     m_measurements[itb->first] = Measurements();
     m_currMeasurePtr = &m_measurements[itb->first];
