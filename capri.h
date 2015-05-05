@@ -105,22 +105,40 @@ namespace CAPRI
       };
       typedef std::stack <SimdStackElem> SimdStack;
       SimdStack m_stack;
-      double m_pdom_util;
-      double m_tbc_util;
-      double m_capri_util;
       
       CAPT m_capt;
       Trace m_trace;
-      
-      long m_total_inst_count;
-      long m_non_divergent_inst_count;
-      long m_mispredictions;
-      long m_adq_branches;
-      long m_inadq_branches;
-      
+
+    public:
+      struct Measurements{
+        double m_pdom_util;
+        double m_tbc_util;
+        double m_capri_util;
+
+        long m_total_inst_count;
+        long m_non_divergent_inst_count;
+        long m_mispredictions;
+        long m_adq_branches;
+        long m_inadq_branches;
+        Measurements(){
+          m_mispredictions = 0;
+          m_non_divergent_inst_count = 0;
+          m_adq_branches = 0;
+          m_inadq_branches = 0;
+          m_total_inst_count = 0;
+          m_tbc_util = 0;
+          m_capri_util = 0;
+          m_pdom_util = 0;
+        }
+      };
+    private:
+      Measurements *m_currMeasurePtr;
+      typedef std::map<TBID, Measurements> TBMeasurements;
+      TBMeasurements m_measurements;
+      typedef double(*Util_func)(Measurements &m);
       static Capri *m_obj;
 
-      void print_simd_util(double simd_util, const char*);
+      void print_simd_util(Util_func func, const char*);
       int get_min_pc_wid(ThreadBlock &tblock);
       void check_adequacy(Instruction &curr, ThreadBlock &tblock);
 
