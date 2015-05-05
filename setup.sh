@@ -1,4 +1,4 @@
-if [ -n $(uname -m | grep '64') ];
+if [ -n $(uname -m | grep '64'| wc -l) != 0 ];
 then
   dfile=$PWD/cudatoolkit_4.0.17_linux_64_ubuntu10.10.run
   if [ -e "$dfile" ];
@@ -48,8 +48,8 @@ else
   cp gpgpusim/setup_environment gpgpusim/setup_environment.back
 fi
 
-echo "export CUDA_INSTALL_PATH=$PWD/../cuda" > gpgpusim/setup_environment
-echo "export PATH=$PWD/../:$PATH" >> gpgpusim/setup_environment
+echo "export CUDA_INSTALL_PATH=$PWD/cuda" > gpgpusim/setup_environment
+echo "export PATH=$PWD/:$PATH" >> gpgpusim/setup_environment
 cat gpgpusim/setup_environment.back >> gpgpusim/setup_environment
 bash -lic "cd gpgpusim; source setup_environment; make;"
 
