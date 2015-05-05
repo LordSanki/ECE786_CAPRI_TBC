@@ -1,4 +1,4 @@
-if [ -n $(uname -m | grep '64'| wc -l) != 0 ];
+if [ $(uname -m | grep '64'| wc -l) != 0 ];
 then
   dfile=$PWD/cudatoolkit_4.0.17_linux_64_ubuntu10.10.run
   if [ -e "$dfile" ];
@@ -36,6 +36,9 @@ sudo apt-get install g++-4.4
 sudo apt-get install bison
 sudo apt-get install flex
 sudo apt-get install libz-dev
+sudo apt-get install libglapi-mesa
+sudo apt-get install libgl1-mesa-glx
+sudo ln -sf $(locate libGL.so.1 | grep 'mesa/' | head -n 1) /usr/lib/libGL.so
 
 ln -sf /usr/bin/gcc-4.4 gcc
 ln -sf /usr/bin/g++-4.4 g++
