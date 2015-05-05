@@ -127,23 +127,54 @@ void Capri::check_adequacy( Instruction &curr, ThreadBlock &tblock)
 
   ntaken_count = wcount - ntaken_count;
 
-  if(taken_count < wcount || ntaken_count < wcount){
-    m_adq_branches++;
-    if( false == m_capt(curr.pc) ){
-      m_mispredictions++;
-      m_stack.top().capri.factor = 0.5;
+  bool non_diverging_branch = true;
+  for(int b=0; b<32; b++){
+    if(mask_count[b] != wcount)
+      non_diverging_branch = false;
+  }
+  // if capt predicts adq
+  if(m_capt(curr.pc) ){
+    // check if it was actually adq
+    if(taken_count < wcount || ntaken_count < wcount){
+      // inrement counter
+      if(non_diverging_branch == false)
+        m_adq_branches++;
+      // set factor
+      m_stack.top().capri.factor = (((double)wcount)/ ((double)taken_count+ntaken_count) );
+      m_capt(curr.pc, true);
     }
     else{
-      m_stack.top().capri.factor = (((double)wcount)/ ((double)taken_count+ntaken_count) );
+      m_inadq_branches++;
+      // misprediction by capt
+      m_mispredictions++;
+      // set factor
+      m_stack.top().capri.factor = 0.5;
+      m_capt(curr.pc, false);
     }
-    m_capt(curr.pc, true);
+  }
+  // capt predicts inadq
+  else{
+    m_stack.top().capri.factor = 0.5;
+    // if branch is adq
+    if(taken_count < wcount || ntaken_count < wcount){
+      // misprediction by capt
+      m_mispredictions++;
+      m_capt(curr.pc, true);
+      m_adq_branches++;
+    }
+    else{
+      m_inadq_branches++;
+      m_capt(curr.pc, false);
+    }
+  }
+
+  if(non_diverging_branch){
+    m_stack.top().capri.factor = 1.0;
+    m_stack.top().pdom.factor = 1.0;
   }
   else{
-    m_capt(curr.pc, false);
-    m_inadq_branches++;
-    m_stack.top().capri.factor = 0.5;
+    m_stack.top().pdom.factor = 0.5;
   }
-  m_stack.top().pdom.factor = 0.5;
   m_stack.top().tbc.factor = (((double)wcount)/ ((double)taken_count+ntaken_count) );
 }
 
@@ -173,7 +204,6 @@ void Capri::print_result()
   print_simd_util(m_pdom_util, "PDOM");
   print_simd_util(m_tbc_util, "TBC");
   print_simd_util(m_capri_util, "CAPRI");
-  cout<<"Non divergent Inst:\t"<<m_non_divergent_inst_count<<"\n";
   cout<<"Avg PDOM Prediction Rate:\t"<<pdom_pred_rate<<"\n";
   cout<<"Avg TBC Prediction Rate:\t"<<tbc_pred_rate<<"\n";
   cout<<"Avg CAPRI Prediction Rate:\t"<<capri_pred_rate<<"\n";
