@@ -15,12 +15,13 @@ __global__ void vecAdd(float *in1, float *in2, float *out, int len) {
   //@@ Insert code to implement vector addition here
 
 //  for(i=0; i<2; i++)
+  for(i=0; i<1000; i++)
     if(threadIdx.x < 16 || threadIdx.x > 47 )
       out[i] = in1[i]+in2[i];
   
   for(i=0; i<1000; i++)
-    if(threadIdx.x < 16 || threadIdx.x > 47 )
-    //if(threadIdx.x%2 == 0 )
+    //if(threadIdx.x < 16 || threadIdx.x > 47 )
+    if(threadIdx.x%2 == 0 )
       out[i] = in1[i]+in2[i];
 
   out[i] = in1[i]+in2[i];
@@ -41,7 +42,7 @@ int main(int argc, char **argv) {
   if(argc > 1)
     inputLength = atoi(argv[1]);
   else
-   inputLength = 128;
+   inputLength = 128000;
 
   hostInput1 = genInput(inputLength);
   hostInput2 = genInput(inputLength);
@@ -58,7 +59,7 @@ int main(int argc, char **argv) {
 
   //@@ Initialize the grid and block dimensions here
   //dim3 numBlocks(((inputLength-1)/ThreadsPerBlock)+1,1,1);
-  dim3 numBlocks(1,1,1);
+  dim3 numBlocks(5,1,1);
   //dim3 numThreads(ThreadsPerBlock,1,1);
   dim3 numThreads(64,1,1);
 
