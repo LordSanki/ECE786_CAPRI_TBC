@@ -15,8 +15,10 @@ Capri* Capri::getCapriObj()
 }
 void Capri::releaseCapriObj()
 {
-  if(m_obj)
+  if(m_obj){
     delete m_obj;
+    m_obj = NULL;
+  }
 }
 
 static double pdom_util_func(Capri::Measurements &m)
@@ -53,7 +55,6 @@ Capri::~Capri()
 
 void Capri::store(TBID tbid, int wid, int opcode, long pc, BitMask mask)
 {
-//  if(tbid.x == 0 && tbid.y == 0 && tbid.z == 0){
     Trace::iterator it = m_trace.find(tbid);
     if(it == m_trace.end()){
       it = m_trace.insert( pair<TBID,ThreadBlock>(tbid, ThreadBlock()) ).first;
@@ -67,7 +68,6 @@ void Capri::store(TBID tbid, int wid, int opcode, long pc, BitMask mask)
     ins.pc = pc;
     ins.mask = mask;
     tblock[wid].push_back(ins);
-//  }
 }
 
 void Capri::process()
@@ -75,6 +75,10 @@ void Capri::process()
   for(Trace::iterator itb = m_trace.begin(); itb != m_trace.end(); itb++){
     ThreadBlock &tblock = itb->second;
     int wid = get_min_pc_wid(tblock);
+    int x = itb->first.x;
+    int y = itb->first.y;
+    int z = itb->first.z;
+    int size = tblock.size();
     m_stack = SimdStack();
     m_measurements[itb->first] = Measurements();
     m_currMeasurePtr = &m_measurements[itb->first];
@@ -86,12 +90,24 @@ void Capri::process()
       if(m_stack.empty() == false){
         // found a reconvergence point. Pop the top of stack
         // and update global counter
+        SimdStackElem elem = m_stack.top();
         if(curr.mask == m_stack.top().mask)
         {
           m_currMeasurePtr->m_pdom_util += (m_stack.top().pdom.factor * m_stack.top().pdom.count);
           m_currMeasurePtr->m_tbc_util += (m_stack.top().tbc.factor * m_stack.top().tbc.count);
           m_currMeasurePtr->m_capri_util += (m_stack.top().capri.factor * m_stack.top().capri.count);
+          m_currMeasurePtr->m_pdom_count += ( m_stack.top().pdom.count);
+          m_currMeasurePtr->m_tbc_count += ( m_stack.top().tbc.count);
+          m_currMeasurePtr->m_capri_count += ( m_stack.top().capri.count);
           m_stack.pop();
+          if(m_stack.empty()){
+            m_currMeasurePtr->m_non_divergent_inst_count++;
+          }
+          else{
+            m_stack.top().capri.count++;
+            m_stack.top().tbc.count++;
+            m_stack.top().pdom.count++;
+          }
         }
         // not a reconv point. increment counter
         else{
@@ -151,6 +167,11 @@ void Capri::check_adequacy( Instruction &curr, ThreadBlock &tblock)
     if(mask_count[b] != wcount)
       non_diverging_branch = false;
   }
+  double compact_factor = taken_count+ntaken_count;
+  if(compact_factor > 0.0)
+    compact_factor = wcount/compact_factor;
+  else
+    compact_factor = 1;
   // if capt predicts adq
   if(m_capt(curr.pc) ){
     // check if it was actually adq
@@ -159,7 +180,7 @@ void Capri::check_adequacy( Instruction &curr, ThreadBlock &tblock)
       if(non_diverging_branch == false)
         m_currMeasurePtr->m_adq_branches++;
       // set factor
-      m_stack.top().capri.factor = (((double)wcount)/ ((double)taken_count+ntaken_count) );
+      m_stack.top().capri.factor = compact_factor;
       m_capt(curr.pc, true);
     }
     else{
@@ -194,7 +215,7 @@ void Capri::check_adequacy( Instruction &curr, ThreadBlock &tblock)
   else{
     m_stack.top().pdom.factor = 0.5;
   }
-  m_stack.top().tbc.factor = (((double)wcount)/ ((double)taken_count+ntaken_count) );
+  m_stack.top().tbc.factor = compact_factor;
 }
 
 int Capri::get_min_pc_wid(ThreadBlock &tblock)
@@ -214,20 +235,34 @@ int Capri::get_min_pc_wid(ThreadBlock &tblock)
 
 void Capri::print_result()
 {
-  double capri_pred_rate=0, pdom_pred_rate=0, tbc_pred_rate=0;
+  long count = 0;
+  long double capri_pred_rate=0, pdom_pred_rate=0, tbc_pred_rate=0;
   for(TBMeasurements::iterator it = m_measurements.begin();
       it!= m_measurements.end(); it++){
-    long total_branches = it->second.m_adq_branches + it->second.m_inadq_branches;
-    double capri_rate = (total_branches - it->second.m_mispredictions); capri_rate /= total_branches;
-    double pdom_rate = it->second.m_inadq_branches; pdom_rate /= total_branches;
-    double tbc_rate = it->second.m_adq_branches; tbc_rate /= total_branches;
-    capri_pred_rate += capri_rate;
-    pdom_pred_rate += pdom_rate;
-    tbc_pred_rate += tbc_rate;
+    long double total_branches = it->second.m_adq_branches + it->second.m_inadq_branches;
+    long double capri_rate = (total_branches - it->second.m_mispredictions);
+    long double pdom_rate = it->second.m_inadq_branches;
+    long double tbc_rate = it->second.m_adq_branches;
+    if(total_branches > 0.0){
+      capri_rate /= total_branches;
+      pdom_rate /= total_branches;
+      tbc_rate /= total_branches;
+      capri_pred_rate += capri_rate;
+      pdom_pred_rate += pdom_rate;
+      tbc_pred_rate += tbc_rate;
+      count++;
+    }
   }
-  capri_pred_rate /= m_measurements.size();
-  tbc_pred_rate /= m_measurements.size();
-  pdom_pred_rate /= m_measurements.size();
+  if(count > 0){
+    capri_pred_rate /= count;
+    tbc_pred_rate /= count;
+    pdom_pred_rate /= count;
+  }
+  else{
+    capri_pred_rate =1;
+    tbc_pred_rate /= 1;
+    pdom_pred_rate /= 1;
+  }
   cout<<"\n\n====================================================\n\n\n";
   print_simd_util(pdom_util_func, "PDOM");
   print_simd_util(tbc_util_func, "TBC");
@@ -240,14 +275,22 @@ void Capri::print_result()
 
 void Capri::print_simd_util(Util_func func, const char * name)
 {
-  double simd_util;
+  long double simd_util = 0;
+  long count=0;
   for(TBMeasurements::iterator it = m_measurements.begin();
       it!= m_measurements.end(); it++)
   {
-    double util = func(it->second) + it->second.m_non_divergent_inst_count;
-    simd_util += (util/it->second.m_total_inst_count);
+    long double util = func(it->second) + it->second.m_non_divergent_inst_count;
+    //cout<<" Factor:\t"<<func(it->second)<<"\tNonD:\t"<<it->second.m_non_divergent_inst_count<<"\tTot:\t"<<it->second.m_total_inst_count<<"\tCont:\t"<<it->second.m_pdom_count<<"\n";
+    if(it->second.m_total_inst_count > 0.0){
+      simd_util += (util/it->second.m_total_inst_count);
+      count++;
+    }
   }
-  simd_util /= m_measurements.size();
+  if(count > 0)
+    simd_util /= count;
+  else
+    simd_util = 1;
   cout<<"Avg "<<name<<" SIMD Utilization:\t"<<simd_util<<"\n";
 }
 

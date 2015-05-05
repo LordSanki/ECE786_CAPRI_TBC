@@ -91,8 +91,8 @@ namespace CAPRI
       Capri();
       ~Capri();
       struct SimdUtil{
-        double factor;
-        long count;
+        long double factor;
+        long double count;
         SimdUtil(){factor = 0; count = 0;}
       };
       struct SimdStackElem{
@@ -111,15 +111,17 @@ namespace CAPRI
 
     public:
       struct Measurements{
-        double m_pdom_util;
-        double m_tbc_util;
-        double m_capri_util;
-
-        long m_total_inst_count;
-        long m_non_divergent_inst_count;
-        long m_mispredictions;
-        long m_adq_branches;
-        long m_inadq_branches;
+        long double m_pdom_util;
+        long double m_tbc_util;
+        long double m_capri_util;
+        long double m_pdom_count;
+        long double m_capri_count;
+        long double m_tbc_count;
+        long double m_total_inst_count;
+        long double m_non_divergent_inst_count;
+        long double m_mispredictions;
+        long double m_adq_branches;
+        long double m_inadq_branches;
         Measurements(){
           m_mispredictions = 0;
           m_non_divergent_inst_count = 0;
@@ -129,6 +131,9 @@ namespace CAPRI
           m_tbc_util = 0;
           m_capri_util = 0;
           m_pdom_util = 0;
+          m_pdom_count = 0;
+          m_capri_count = 0;
+          m_tbc_count = 0;
         }
       };
     private:
