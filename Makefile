@@ -1,6 +1,6 @@
 NVCC=$(CUDA_INSTALL_PATH)/bin/nvcc
 
-SRC=vector_addition.cu
+SRC=divergent_kernel.cu
 
 all: OBJ
 
