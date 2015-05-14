@@ -1,3 +1,4 @@
+CUDA_INSTALL_PATH?=/usr/local/cuda/
 NVCC=$(CUDA_INSTALL_PATH)/bin/nvcc
 
 SRC=divergent_kernel.cu
